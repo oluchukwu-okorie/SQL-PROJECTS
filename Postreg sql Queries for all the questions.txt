@@ -1,0 +1,86 @@
+/*Question 1:What were the rental duration of films in quartiles across categories?*/
+
+SELECT
+  filmtitle,
+  categoryname,
+  standard_quartile,
+  rentalduration,
+
+  CASE
+    WHEN standard_quartile = 1 THEN 'First quartile'
+    WHEN standard_quartile = 2 THEN 'Second quartile'
+    WHEN standard_quartile = 3 THEN 'Third quartile'
+    ELSE 'Final quartile'
+  END AS movie_level
+FROM (SELECT
+  f.title filmtitle,
+  c.name categoryname,
+  f.rental_duration rentalduration,
+  NTILE(4) OVER (PARTITION BY c.name ORDER BY f.rental_duration) AS standard_quartile
+FROM category c
+JOIN film_category fc
+  ON c.category_id = fc.category_id
+JOIN film f
+  ON f.film_id = fc.film_id) sub;
+
+/*Question 2:What are the frequency of rental counts of films across film categories*/
+
+SELECT
+  categoryname,
+  filmtitle,
+  COUNT(*) rental_count
+FROM (SELECT
+  f.title filmtitle,
+  rental_id rentalid,
+  c.name categoryname
+FROM category c
+JOIN film_category fc
+  ON c.category_id = fc.category_id
+JOIN film f
+  ON fc.film_id = f.film_id
+JOIN inventory i
+  ON f.film_id = i.film_id
+JOIN rental r
+  ON i.inventory_id = r.inventory_id
+GROUP BY 1,
+         2,
+         3
+ORDER BY 2) sub
+GROUP BY 1,
+         2
+ORDER BY categoryname
+
+/*Question 3:What are the full names of the Top ten paying customers?
+
+SELECT c.first_name, 
+       c.last_name,
+       c.first_name || ' ' || c.last_name AS full_name,
+    DATE_TRUNC('month',p.payment_date)payment_month,
+       p.amount
+FROM  payment p
+JOIN  customer c
+ON     c.customer_id = p.customer_id
+ORDER BY p.amount DESC
+LIMIT 10;
+
+/*Question 4:What are the full names of the Top ten paying customers?
+SELECT customerid,
+       full_name,
+       payment_month,
+       MAX(amountpay) OVER (PARTITION BY full_name ORDER BY payment_month) AS  totalpay_percustomer,
+       COUNT(payid) OVER (PARTITION BY full_name ORDER BY payment_month) AS    totalcount_percustomer
+FROM (SELECT 
+       c.customer_id customerid,
+       p.payment_id payid,
+       c.first_name, 
+       c.last_name,
+      c.first_name || ' ' || c.last_name AS  full_name,
+      DATE_TRUNC('month',p.payment_date) payment_month,
+      p.amount amountpay
+FROM  payment p
+JOIN  customer c
+ON    c.customer_id = p.customer_id
+GROUP BY 1,2,3,5
+ORDER BY amountPAY DESC)t1
+ORDER BY amountpay;
+
